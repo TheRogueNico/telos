@@ -2,105 +2,62 @@
 
 ## Overview
 
-The application organizes work into **Groups**, **Tasks**, and **Key Tasks**.
+The application organizes work into **Groups**, **Tasks**, and **Key Tasks**. The following diagram shows the structure of the data:
 
-The following describes the structure of the data.
-It is **not** the database implementation; see the [Database](#database) section for that.
+```mermaid
+erDiagram
+    TASK_GROUP ||--o{ TASK : contains
+    TASK ||--o{ KEY_TASK : contains
+
+    TASK_GROUP {
+        int ID PK
+        string Name "Not Null"
+    }
+    TASK {
+        int ID PK
+        int GroupID FK "Not Null"
+        string Title "Not Null"
+        string Intent "Not Null"
+        string EndState
+        string Status "Not Null, default active"
+        date CreationDate "Not Null"
+    }
+    KEY_TASK {
+        int ID PK
+        int TaskID FK "Not Null"
+        string Description "Not Null"
+        bool Completed "Not Null, default false"
+    }
+```
+
+> [!NOTE]
+> `ID` and `CreationDate` are generated automatically. All other fields marked "Not Null" must be provided by the user, unless they have a default.
 
 ### Groups
 
-A group is a collection of related tasks.
-
-```
-Group
- ├── ID
- └── Name*
-```
+A group is a collection of related tasks. To create a group, only `Name` is required.
 
 ### Tasks
 
-A task represents a specific objective to be accomplished.
-
-```
-Task
- ├── ID
- ├── Title*
- ├── Intent*
- ├── Key Tasks
- ├── End State*
- ├── Status
- └── Creation Date
-```
+A task represents a specific objective to be accomplished. It belongs to one group and may contain multiple key tasks.
 
 * **Intent** - What the task must achieve.
-* **Key Tasks** - What must be accomplished.
-* **End State** - What success looks like when the task is done.
+* **End State** - What success looks like when the task is done. Optional.
 
-A task belongs to one group and may contain multiple key tasks.
+To create a task, the user must specify `Title` and `Intent`. Key tasks are added after the task is created.
+
+`Status` can be changed freely after creation and is one of:
+
+* `active` (default)
+* `paused`
+* `canceled`
+* `completed`
 
 ### Key Tasks
 
-A key task describes a specific action or objective required to accomplish its parent task.
+A key task describes a specific action required to accomplish its parent task. To create a key task, only `Description` is required. `Completed` can be changed freely.
 
-```text
-Key Task
- ├── ID
- ├── Description*
- └── Status
-```
+### Rules
 
-## Defaults and Required Fields
-
-Fields marked with `*` must be specified by the user when the item is created.
-
-ID fields are automatically generated.
-
-For status fields, the application assigns a default value to them at creation:
-
-| Entity   | Field  | Allowed Values                              | Default         |
-| -------- | ------ | ------------------------------------------- | --------------- |
-| Task     | Status | `active`, `paused`, `canceled`, `completed` | `active`        |
-| Key Task | Status | `completed`, `not completed`                | `not completed` |
-
-## Database
-
-The structure above is represented in the database as follows.
-
-### Group
-
-| Column | Constraint  |
-| ------ | ----------- |
-| `ID`   | Primary Key |
-| `Name` | Not Null    |
-
-### Task
-
-| Column         | Constraint               |
-| -------------- | ------------------------ |
-| `ID`           | Primary Key              |
-| `GroupID`      | Foreign Key              |
-| `Title`        | Not Null                 |
-| `Intent`       | Not Null                 |
-| `EndState`     | Not Null                 |
-| `Status`       | Not Null                 |
-| `CreationDate` | Not Null                 |
-
-### KeyTask
-
-| Column        | Constraint              |
-| ------------- | ----------------------- |
-| `ID`          | Primary Key             |
-| `TaskID`      | Foreign Key             |
-| `Description` | Not Null                |
-| `Status`      | Not Null                |
-
-### Relationships
-
-```
-Group --[1:N]-> Task --[1:N]-> KeyTask
-```
-
-* A **Group** can contain multiple **Tasks**.
-* A **Task** belongs to one **Group**.
-* A **Task** can contain multiple **Key Tasks**.
-* A **Key Task** belongs to one **Task**.
+* Deleting a group also deletes its tasks and their key tasks.
+* Key tasks are shown in the order they were created.
